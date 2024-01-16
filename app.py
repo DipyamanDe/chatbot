@@ -6,8 +6,7 @@ import openai
 
 subscription_key = "7f3f190f4ddd4273989358d304df47d7"
 region = "centralindia"
-openai.api_key = "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"
-
+openai.api_key = "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"
 app = Flask(__name__)
 CORS(app, origins="http://localhost:3000")
 
@@ -41,6 +40,18 @@ def transcribe_audio(file_path, subscription_key, region):
     except Exception as e:
         return f"Error in transcribe_audio: {str(e)}"
 
+def text_to_speech(text, subscription_key, region, output_file_path='output.wav'):
+    try:
+        speech_config = speechsdk.SpeechConfig(subscription=subscription_key, region=region)
+        synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
+
+        result = synthesizer.speak_text(text)
+        result.write_to_wav_file(output_file_path)
+
+        return output_file_path
+    except Exception as e:
+        return f"Error in text_to_speech: {str(e)}"
+    
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
@@ -88,9 +99,13 @@ def chat():
             ])
 
         assistant_message = get_answers(messages)
-        messages.append({"role": "assistant", "content": assistant_message})
+         # Convert the assistant's response to voice
+        audio_output_path = text_to_speech(assistant_message, subscription_key, region)
 
-        return jsonify({"assistant_message": assistant_message})
+        messages.append({"role": "assistant", "content": assistant_message, "audio": audio_output_path})
+        print("messages: -> :", messages)
+        return jsonify({"assistant_message": assistant_message, "audio_output_path": audio_output_path})    
+
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
